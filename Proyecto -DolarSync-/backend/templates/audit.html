@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DolarSync - Auditoría de Accesos</title>
+    <link rel="icon" href="/logo" type="image/png" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #0070d1;
+            --primary-dark: #0f172a;
+            --bg-body: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --white: #ffffff;
+            --danger: #ef4444;
+            --warning: #d97706;
+            --success: #16a34a;
+        }
+
+        /* --- PRELOADER --- */
+        #loader-wrapper {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease, visibility 0.6s;
+        }
+        .loader-content { text-align: center; }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 5px solid rgba(0, 112, 209, 0.1);
+            border-left-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-hidden { opacity: 0; visibility: hidden; }
+
+        body {
+            background: radial-gradient(circle at top right, #e0f2fe, #f8fafc);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 0;
+            min-height: 100vh;
+        }
+
+        .container { 
+            width: 90%;
+            max-width: 1100px; 
+            margin: auto;
+            animation: contentFade 0.8s ease-out;
+        }
+
+        @keyframes contentFade {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 45px;
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        .back-link:hover { color: var(--primary); }
+
+        /* --- FILTROS --- */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            width: 100%;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 14px 20px 14px 50px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            background: var(--white);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(0, 112, 209, 0.08);
+        }
+
+        .filter-info {
+            background: var(--primary-dark);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 14px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+
+        /* --- TABLA --- */
+        .card-bitacora {
+            background: var(--white);
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.03);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            overflow: hidden;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th {
+            background: #f8fafc;
+            padding: 20px 24px;
+            text-align: left;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid #f1f5f9;
+            letter-spacing: 1px;
+        }
+
+        td { padding: 20px 24px; border-bottom: 1px solid #f8fafc; font-size: 0.9rem; }
+
+        .fecha-registro { display: flex; align-items: center; gap: 12px; }
+        .fecha-txt { font-weight: 800; color: var(--primary-dark); }
+        
+        .hora-pill {
+            background: #e0f2fe;
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 0.7rem;
+        }
+
+        /* --- BADGES CORREGIDOS --- */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .badge-success { background: #dcfce7; color: var(--success); border: 1px solid #bbf7d0; }
+        .badge-warning { background: #fef3c7; color: var(--warning); border: 1px solid #fde68a; }
+        .badge-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
+        .badge-muted { background: #f1f5f9; color: var(--text-muted); border: 1px solid #e2e8f0; }
+
+        .user-cell { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--primary-dark); }
+        .user-icon { color: #cbd5e1; font-size: 1.2rem; }
+
+        .btn-refresh {
+            background: var(--white);
+            border: 1.5px solid #e2e8f0;
+            padding: 12px 20px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.3s;
+        }
+        .btn-refresh:hover { 
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .spinning { animation: spin 0.8s linear infinite; }
+
+        @media (max-width: 768px) {
+            .header-nav { flex-direction: column; align-items: flex-start; gap: 20px; }
+            .filter-bar { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader-wrapper">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <div style="font-size: 0.75rem; font-weight: 800; color: var(--primary-dark); letter-spacing: 2px; text-transform: uppercase;">DolarSync</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header-nav">
+            <div>
+                <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Volver al Panel</a>
+                <h2 style="margin:0; font-weight:800; font-size: 2rem; color: var(--primary-dark); letter-spacing: -1px;">Bitácora de Actividad</h2>
+                <p style="color: var(--text-muted); margin: 5px 0 0 0; font-weight: 500;">Seguros Horizonte - Control de Auditoría</p>
+            </div>
+            <button class="btn-refresh" id="btnActualizar" onclick="actualizarManual()">
+                <i class="fas fa-sync-alt" id="iconSync"></i> Actualizar Datos
+            </button>
+        </div>
+
+        <div class="filter-bar">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar por usuario, acción o fecha...">
+            </div>
+            <div class="filter-info">
+                <span id="rowCount">Cargando registros...</span>
+            </div>
+        </div>
+
+        <div class="card-bitacora">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha y Registro</th>
+                        <th>Usuario</th>
+                        <th>Acción Realizada</th>
+                        <th>Detalles Técnicos</th>
+                    </tr>
+                </thead>
+                <tbody id="audit-table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Preloader
+        window.addEventListener("load", () => {
+            const loader = document.getElementById("loader-wrapper");
+            setTimeout(() => loader.classList.add("loader-hidden"), 400); 
+        });
+
+        // Formateador de Fecha mejorado para soportar múltiples formatos de string
+        function formatearFechaFinal(str) {
+            if (!str || str === "None") return "---";
+            // Si la fecha ya viene formateada desde el backend (DD/MM/YYYY)
+            if (str.includes('/')) {
+                const partes = str.split(' ');
+                return `
+                    <div class="fecha-registro">
+                        <span class="fecha-txt">${partes[0]}</span>
+                        <span class="hora-pill">${partes[1]} ${partes[2] || ''}</span>
+                    </div>
+                `;
+            }
+            // Si viene en formato ISO (YYYY-MM-DD)
+            try {
+                const partes = str.split(' '); 
+                const fecha = partes[0].split('-'); 
+                const tiempo = partes[1].split(':'); 
+                const d = fecha[2], m = fecha[1], a = fecha[0];
+                let hh = parseInt(tiempo[0]);
+                const mm = tiempo[1];
+                const ampm = hh >= 12 ? 'PM' : 'AM';
+                hh = hh % 12 || 12; 
+
+                return `
+                    <div class="fecha-registro">
+                        <span class="fecha-txt">${d}/${m}/${a}</span>
+                        <span class="hora-pill">${hh}:${mm} ${ampm}</span>
+                    </div>
+                `;
+            } catch (e) { return str; }
+        }
+
+        function filtrarTabla() {
+            const input = document.getElementById("searchInput");
+            const filter = input.value.toLowerCase();
+            const rows = document.getElementById("audit-table-body").getElementsByTagName("tr");
+            let visibleCount = 0;
+
+            for (let i = 0; i < rows.length; i++) {
+                const rowText = rows[i].textContent || rows[i].innerText;
+                if (rowText.toLowerCase().indexOf(filter) > -1) {
+                    rows[i].style.display = "";
+                    visibleCount++;
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+            document.getElementById("rowCount").innerText = filter === "" ? `Total: ${rows.length} registros` : `Encontrados: ${visibleCount}`;
+        }
+
+        async function actualizarManual() {
+            const icon = document.getElementById('iconSync');
+            const btn = document.getElementById('btnActualizar');
+            btn.style.opacity = '0.6';
+            btn.style.pointerEvents = 'none';
+            icon.classList.add('spinning');
+            
+            await cargarLogs();
+            
+            setTimeout(() => {
+                icon.classList.remove('spinning');
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }, 600);
+        }
+
+        async function cargarLogs() {
+            const tbody = document.getElementById('audit-table-body');
+            const rowCountLabel = document.getElementById("rowCount");
+            
+            try {
+                const response = await fetch('/api/audit-logs');
+                const logs = await response.json();
+                
+                if (logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:60px; color:var(--text-muted);">No hay actividad registrada.</td></tr>';
+                    rowCountLabel.innerText = "0 registros";
+                    return;
+                }
+
+                tbody.innerHTML = logs.map(log => {
+                    const acc = log.accion.toUpperCase();
+                    
+                    // Lógica de colores Dinámica
+                    let badgeClass = 'badge-muted';
+                    if (acc.includes('INICIO') || acc.includes('LOGIN')) {
+                        badgeClass = 'badge-success';
+                    } else if (acc.includes('FALLA') || acc.includes('DESCONEXIÓN')) {
+                        badgeClass = 'badge-danger';
+                    } else if (acc.includes('CIERRE') || acc.includes('SALIDA')) {
+                        badgeClass = 'badge-warning';
+                    }
+
+                    return `
+                        <tr>
+                            <td>${formatearFechaFinal(log.fecha_hora)}</td>
+                            <td>
+                                <div class="user-cell">
+                                    <i class="fas fa-user-circle user-icon"></i>
+                                    <span>${log.username}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge ${badgeClass}">
+                                    ${log.accion}
+                                </span>
+                            </td>
+                            <td style="color:var(--text-muted); font-size: 0.8rem; font-family: monospace;">
+                                ${log.detalles || '—'}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                rowCountLabel.innerText = `Total: ${logs.length} registros`;
+                filtrarTabla();
+
+            } catch (error) {
+                console.error("Error cargando auditoría:", error);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--danger);">Error de conexión con la base de datos MySQL</td></tr>';
+            }
+        }
+
+        // Carga inicial
+        window.onload = cargarLogs;
+    </script>
+</body>
+</html>

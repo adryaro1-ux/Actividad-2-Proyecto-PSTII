@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DolarSync - Seguros Horizonte (AMP)</title>
+    <link rel="icon" href="/logo" type="image/png" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #0070d1;
+            --primary-dark: #0f172a;
+            --medical-cyan: #06b6d4;
+            --bg-body: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --white: #ffffff;
+            --glass: rgba(255, 255, 255, 0.95);
+        }
+
+        /* --- PRELOADER --- */
+        #loader-wrapper {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #f8fafc; display: flex; justify-content: center;
+            align-items: center; z-index: 9999; transition: opacity 0.6s ease, visibility 0.6s;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid rgba(0, 112, 209, 0.1);
+            border-left-color: var(--primary); border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-hidden { opacity: 0; visibility: hidden; }
+
+        /* --- BODY & LAYOUT --- */
+        body { 
+            background: radial-gradient(circle at top right, #e0f2fe, #f8fafc);
+            color: var(--text-main); font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0; padding-top: 90px; min-height: 100vh;
+        }
+        .main-content { 
+            width: 90%; max-width: 1100px; margin: 0 auto; padding-bottom: 50px;
+            animation: contentFade 0.8s ease-out;
+        }
+        @keyframes contentFade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- HEADER --- */
+        .header {
+            width: 100%; padding: 0 5%; height: 75px; background: var(--glass);
+            backdrop-filter: blur(12px); position: fixed; top: 0; z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #e2e8f0; box-sizing: border-box;
+        }
+        .badge-rol { font-size: 0.65rem; font-weight: 800; background: #e0f2fe; color: var(--primary); padding: 3px 10px; border-radius: 6px; text-transform: uppercase; }
+        .logout-btn { background: #f1f5f9; border: none; color: var(--text-muted); width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: 0.3s; }
+        .logout-btn:hover { background: #fee2e2; color: #ef4444; }
+
+        /* --- BUTTONS --- */
+        .button-group { display: flex; gap: 12px; margin-bottom: 35px; align-items: center; }
+        .btn-action { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; padding: 12px 22px; border-radius: 12px; text-decoration: none; transition: all 0.3s; font-size: 0.85rem; border: none; cursor: pointer; }
+        .btn-primary { background: var(--primary-dark); color: white; }
+        .btn-users { background: var(--primary); color: white; }
+        .btn-audit { background: #6366f1; color: white; }
+        .btn-refresh { background: var(--white); color: var(--text-muted); border: 1.5px solid #e2e8f0; margin-left: auto; }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+
+        /* --- DASHBOARD GRID --- */
+        .dashboard-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 25px; margin-bottom: 25px; }
+        .rate-card { background: var(--white); border-radius: 30px; padding: 45px; text-align: center; border: 1px solid rgba(226, 232, 240, 0.8); }
+        .rate-value { font-size: 6rem; font-weight: 900; color: var(--primary-dark); letter-spacing: -3px; line-height: 1; margin: 10px 0; }
+        .history-panel { background: var(--white); border-radius: 30px; padding: 30px; border: 1px solid #f1f5f9; }
+        .table-container { height: 320px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; font-size: 0.7rem; color: var(--text-muted); border-bottom: 2px solid #f8fafc; text-transform: uppercase; }
+        td { padding: 14px 12px; border-bottom: 1px solid #f8fafc; font-size: 0.95rem; }
+
+        .last-updated-bar { margin-top: 25px; background: #f1f5f9; padding: 12px 20px; border-radius: 100px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+        .status-pulse { width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+
+        @media (max-width: 992px) { .dashboard-grid { grid-template-columns: 1fr; } .btn-refresh { margin-left: 0; width: 100%; justify-content: center; } }
+    </style>
+</head>
+<body>
+
+    <div id="loader-wrapper">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <div style="font-size: 0.75rem; font-weight: 800; letter-spacing: 2px; color: var(--primary-dark);">DOLARSYNC</div>
+        </div>
+    </div>
+
+    <header class="header">
+        <div class="user-access-info" style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-user-circle" style="color: #cbd5e1; font-size: 1.8rem;"></i>
+            <div class="welcome-text" style="font-size: 0.9rem; font-weight: 500;">
+                Bienvenido, <span style="font-weight: 800; color: var(--primary-dark);">{{ current_user.username }}</span>
+                <span class="badge-rol">{{ current_user.rol }}</span>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn"><i class="fas fa-power-off"></i></a>
+    </header>
+
+    <main class="main-content">
+        <div class="dashboard-header" style="margin-bottom: 40px;">
+            <h2 style="margin:0; font-weight: 800; font-size: 1.8rem;">Panel Monitor de Divisas</h2>
+            <p style="color: var(--text-muted); margin: 5px 0 0 0; font-weight: 500;">Seguros Horizonte - AMP</p>
+        </div>
+
+        <div class="button-group">
+            {% if current_user.rol in ['Operador', 'Gerente', 'Coordinador'] %}
+                <a href="{{ url_for('reports') }}" class="btn-action btn-primary">
+                    <i class="fas fa-file-waveform"></i> Gestión de Reportes
+                </a>
+            {% endif %}
+            
+            {% if current_user.rol == 'Administrador' %}
+                <a href="{{ url_for('admin_dashboard') }}" class="btn-action btn-users">
+                    <i class="fas fa-users-gear"></i> Gestión de Usuarios
+                </a>
+                <a href="/gestion-accesos" class="btn-action btn-audit">
+                    <i class="fas fa-fingerprint"></i> Auditoría de Accesos
+                </a>
+            {% endif %}
+
+            <button onclick="window.location.reload();" class="btn-action btn-refresh">
+                <i class="fas fa-sync-alt"></i> Actualizar
+            </button>
+        </div>
+        
+        <div class="dashboard-grid">
+            <div class="rate-card">
+                <div style="font-weight: 700; color: var(--text-muted); font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase;">Tasa Oficial (BCV)</div>
+                <div id="current-value" class="rate-value">--.--</div>
+                <div style="color: var(--medical-cyan); font-weight: 700;">Bs / USD</div>
+            </div>
+            
+            <div class="history-panel">
+                <h3 style="margin: 0 0 15px 0; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-chart-line" style="color: var(--medical-cyan);"></i> Historial Reciente
+                </h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Valor Bs.</th><th>Sincronización</th></tr>
+                        </thead>
+                        <tbody id="historical-body">
+                            <tr><td colspan="2" style="text-align:center; padding: 40px; color: #cbd5e1;">Cargando historial...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {% if current_user.rol == 'Administrador' %}
+        <div class="card shadow-sm border-0 mb-4" style="background: white; border-radius: 20px; border: 1px solid #f1f5f9;">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4" style="color: #2c3e50; font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; padding-left: 10px;">
+                    <i class="fas fa-history me-2" style="color: #3498db; margin-right: 12px;"></i> Actividad Reciente del Sistema
+                </h5>
+
+                {% if logs %}
+                    <div class="table-responsive" style="padding: 0 15px;"> <table class="table align-middle">
+                            <thead>
+                                <tr class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #f8f9fa;">
+                                    <th style="padding-bottom: 15px; border: 0;">Usuario</th>
+                                    <th style="padding-bottom: 15px; border: 0;">Acción Realizada</th>
+                                    <th style="padding-bottom: 15px; border: 0;" class="text-end">Fecha y Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr style="border-bottom: 1px solid #f8fafc;">
+                                    <td class="py-3 border-0">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-user-circle" style="color: #cbd5e1; font-size: 1.1rem;"></i>
+                                            <span style="color: #444; font-weight: 700;">{{ log.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 border-0">
+                                        <span class="badge rounded-pill" style="background-color: #f0f7ff; color: #5dade2; font-weight: 700; font-size: 0.7rem; padding: 6px 14px; text-transform: uppercase; letter-spacing: 0.3px;">
+                                            {{ log.accion }}
+                                        </span>
+                                        <small class="d-block text-muted" style="margin-top: 5px; font-size: 0.85rem;">{{ log.detalles }}</small>
+                                    </td>
+                                    <td class="py-3 border-0 text-end text-muted" style="font-size: 0.85rem; font-weight: 500;">
+                                        {{ log.fecha_hora }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted mb-0" style="font-size: 0.9rem;">No hay actividad registrada recientemente.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="last-updated-bar" id="last-updated">
+            <div class="status-pulse"></div>
+            <span>Sincronizando con BCV...</span>
+        </div>
+    </main>
+
+    <script>
+        // 1. Loader
+        window.addEventListener("load", () => {
+            setTimeout(() => document.getElementById("loader-wrapper").classList.add("loader-hidden"), 400); 
+        });
+
+        // 2. Control de Navegación (Evita logs falsos de cierre)
+        let isInternalNavigation = false;
+
+        // Marcamos como navegación interna si hace clic en un enlace o envía un formulario
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('a')) isInternalNavigation = true;
+        });
+        document.addEventListener('submit', () => {
+            isInternalNavigation = true;
+        });
+
+        // 3. Funciones de Carga de Datos
+        async function cargarHistorico() {
+            try {
+                const res = await fetch('{{ url_for("historico") }}');
+                const data = await res.json();
+                const tbody = document.getElementById('historical-body');
+                
+                // Limitamos a los últimos 8 registros para la interfaz
+                tbody.innerHTML = data.slice(0, 8).map(r => {
+                    const f = new Date(r.fecha_hora).toLocaleString('es-VE', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                    });
+                    return `<tr>
+                        <td style="font-weight:800; color:var(--primary-dark);">${parseFloat(r.valor).toFixed(2)}</td>
+                        <td style="color: var(--text-muted); font-size: 0.85rem;">${f}</td>
+                    </tr>`;
+                }).join('') || '<tr><td colspan="2">Sin registros</td></tr>';
+            } catch(e) { console.error("Error cargando historial:", e); }
+        }
+
+        async function cargarTasaActual() {
+            const valDiv = document.getElementById('current-value');
+            const upDiv = document.getElementById('last-updated');
+            
+            try {
+                const res = await fetch('{{ url_for("get_dolar_api") }}');
+                const data = await res.json();
+                
+                if (data.price) {
+                    // Actualizamos el número grande
+                    valDiv.innerHTML = `${parseFloat(data.price).toFixed(2)}`;
+                    
+                    // VERIFICACIÓN DE MODO OFFLINE
+                    if (data.source === 'cache_db') {
+                        // Si el dato viene de la base de datos (respaldo)
+                        upDiv.innerHTML = `
+                            <span style="color: #ff9800; font-weight: 800; display: flex; align-items: center; gap: 5px;">
+                                ⚠️ MODO OFFLINE (Respaldo)
+                            </span>`;
+                    } else {
+                        // Si el dato es fresco del BCV
+                        upDiv.innerHTML = `
+                            <div class="status-pulse"></div> 
+                            Sincronizado: ${new Date().toLocaleTimeString('es-VE', {hour: '2-digit', minute:'2-digit', second:'2-digit'})}`;
+                    }
+                }
+                
+                cargarHistorico(); // Actualiza la tabla lateral
+                
+            } catch(e) { 
+                console.error("Error en fetch:", e);
+                valDiv.textContent = '--.--';
+                upDiv.innerHTML = '<span style="color: #ef4444;">⚠️ Error de conexión</span>';
+            }
+        }
+
+        // 4. Ciclos de Actualización y Heartbeat
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarTasaActual();
+            sendHeartbeat();
+        });
+
+        setInterval(cargarTasaActual, 300000); // Cada 5 min
+
+        function sendHeartbeat() {
+            if (navigator.onLine) {
+                fetch('{{ url_for("heartbeat") }}', { method: 'POST' })
+                .catch(err => console.debug("Fallo de latido puntual."));
+            }
+        }
+        setInterval(sendHeartbeat, 30000); // Cada 30 seg
+
+        // 5. Gestión de Conectividad e Internet
+        window.addEventListener('offline', () => {
+            localStorage.setItem('pending_failure', JSON.stringify({
+                event: 'Pérdida de Internet',
+                time: new Date().toLocaleString()
+            }));
+        });
+
+        window.addEventListener('online', async () => {
+            const failure = localStorage.getItem('pending_failure');
+            if (failure) {
+                const data = JSON.parse(failure);
+                await fetch('/log_custom_event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        accion: "RECONEXIÓN",
+                        detalles: `El sistema detectó una caída previa de internet a las ${data.time}`
+                    })
+                });
+                localStorage.removeItem('pending_failure');
+            }
+        });
+
+        // 6. CIERRE REAL: Solo dispara el log si NO es navegación interna
+        window.addEventListener('pagehide', () => {
+            if (!isInternalNavigation) {
+                navigator.sendBeacon('{{ url_for("log_closure") }}');
+            }
+        });
+    </script>
+</body>
+</html>
