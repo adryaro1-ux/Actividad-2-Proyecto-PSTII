@@ -17,3 +17,16 @@ Sigue estos pasos para correr el proyecto localmente:
    ```bash
    git clone [TU_URL_DE_GITHUB]
    cd dolar-sync
+
+2. python -m venv venv
+   En Windows:
+   ```bash
+   venv\Scripts\activate
+
+4. Instalar Depedencias
+   ```bash
+   pip install -r requirements.txt
+
+5. Ejecutar aplicación:
+   ```bash
+   python app.py
